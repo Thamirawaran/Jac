@@ -51,3 +51,14 @@ walker tweet{
         (tweet_node := &(self.tweet_node_jid)) +:Tweeting():+> (user_tweet := Tweet(self.content));
     }
 }
+
+walker comment{
+    has tweet_jid:str;
+    has user_jid:str;
+    has content:str;
+
+    can comment with `root entry{
+        &(self.tweet_jid) +:Reply():+> (user_comment := Comment(self.content));
+        report user_comment;
+    }
+}
