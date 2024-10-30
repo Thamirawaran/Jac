@@ -1,42 +1,37 @@
-node Hastag_node{
+node Hastag_node {}
+
+node Hastag {
+    has tag: str;
 }
 
-node Hastag{
-    has tag:str;
-}
+node Feed_node {}
 
-node Feed_node{
-}
+node Tweet_node {}
 
-node Tweet_node{
-}
-
-node Tweet{
-    has content:str;
-    has tag:str;
+node Tweet {
+    has content: str;
+    has tag: str;
     # has emmbedding:np.array;
 }
 
-node Comment{
-    has content:str;
+node Comment {
+    has content: str;
     # has emmbedding:np.array;
 }
 
-edge Following{
-}
+edge Following {}
 
-edge Tweeting{
-}
+edge Tweeting {}
 
-edge Reply{
-}
+edge Reply {}
 
 glob hastag_node:Hastag_node = Hastag_node();
 glob tweet_node:Tweet_node;
 
-walker Start{
-    can start with `root entry{
-        :g:tweet_node;
+walker Start {
+    can start with `root entry {
+        :g: tweet_node ;
+
         Jac.unrestrict(here, 1);
         feed_node = Feed_node();
         tweet_node = Tweet_node();
@@ -47,23 +42,25 @@ walker Start{
     }
 }
 
-walker follow_request{
-    has followee_tnode_jid:str;
+walker follow_request {
+    has followee_tnode_jid: str;
 
-    can follow with `root entry{
+    can follow with `root entry {
         root +:Following():+> (&(self.followee_tnode_jid));
         report [root-->];
     }
 }
 
-walker tweet{
-    has content:str;
-    has tag:str;
-    can tweet with `root entry{
-        :g: tweet_node, hastag_node;
-        tweet_node +:Tweeting():+> (user_tweet := Tweet(self.content,self.tag));
+walker tweet {
+    has content: str;
+    has tag: str;
+
+    can tweet with `root entry {
+        :g: tweet_node ;
+
+        tweet_node +:Tweeting():+> (user_tweet := Tweet(self.content, self.tag));
         tags = [i.tag for i in [hastag_node-->]];
-        if self.tag not in tags{
+        if self.tag not in tags {
             hastag_node ++> Hastag(self.tag);
         }
         Jac.unrestrict(user_tweet, 1);
@@ -72,22 +69,23 @@ walker tweet{
     }
 }
 
-walker comment{
-    has tweet_jid:str;
-    has content:str;
+walker comment {
+    has tweet_jid: str;
+    has content: str;
 
-    can comment with `root entry{
+    can comment with `root entry {
         &(self.tweet_jid) +:Reply():+> (user_comment := Comment(self.content));
         report user_comment;
     }
 }
 
-walker load_feed{
-    can feed with `root entry{
+walker load_feed {
+    can feed with `root entry {
         feed_list = [];
         followee_list = [root-:Following:->];
-        for followee in followee_list{
-            for tweet in [followee-->]{
+        
+        for followee in followee_list {
+            for tweet in [followee-->] {
                 feed_list.append(jid(tweet));
             }
         }
@@ -95,15 +93,17 @@ walker load_feed{
     }
 }
 
-walker search{
-    has query:str;
+walker search {
+    has query: str;
 
-    can Search with entry{
-        search_tag:any = None;
-        :g: hastag_node;
+    can Search with entry {
+        search_tag: any = None;
+        :g: hastag_node ;
+
         hastag_list = [i for i in [hastag_node-->]];
-        for hastag in hastag_list{
-            if hastag.tag == self.query{
+        
+        for hastag in hastag_list {
+            if hastag.tag == self.query {
                 search_tag = hastag;
             }
         }
