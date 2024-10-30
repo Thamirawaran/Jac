@@ -1,10 +1,3 @@
-import:py from fastapi {FastAPI, HTTPException}
-import:py torch;
-import:py from sklearn.metrics.pairwise {cosine_similarity}
-import:py from sklearn.feature_extraction.text {TfidfVectorizer}
-import:py numpy as np;
-import:py from jac_cloud.core.architype {BaseAnchor}
-
 node Hastag_node{
 }
 
