@@ -5,56 +5,82 @@ import:py from sklearn.feature_extraction.text {TfidfVectorizer}
 import:py numpy as np;
 import:py from jac_cloud.core.architype {BaseAnchor}
 
-node User{
-    has user_name:str;
+node Hastag_node{
 }
 
-node Tweets{
+node Hastag{
+    has tag:str;
+}
+
+node Feed_node{
+}
+
+node Tweet_node{
 }
 
 node Tweet{
     has content:str;
+    has tag:str;
+    # has emmbedding:np.array;
 }
 
 node Comment{
     has content:str;
+    # has emmbedding:np.array;
 }
 
-edge Following{}
+edge Following{
+}
 
-edge Tweeting{}
+edge Tweeting{
+}
 
-edge Retweeting{}
+edge Reply{
+}
+
+glob hastag_node:Hastag_node = Hastag_node();
+glob tweet_node:Tweet_node;
 
 walker Start{
-    has user_name:str;
     can start with `root entry{
+        :g:tweet_node;
         Jac.unrestrict(here, 1);
-        root ++> [User(self.user_name), Tweets()];
+        feed_node = Feed_node();
+        tweet_node = Tweet_node();
+        root ++> [feed_node, tweet_node];
+        report feed_node;
+        report tweet_node;
+        report [root-->];
     }
 }
 
 walker follow_request{
-    has follower_jid:str;
-    has followee_jid:str;
+    has followee_tnode_jid:str;
 
     can follow with `root entry{
-        (follower:= &(self.follower_jid)) +:Following():+> (followee:= &(self.followee_jid));
+        root +:Following():+> (&(self.followee_tnode_jid));
+        report [root-->];
     }
 }
 
 walker tweet{
-    has tweet_node_jid:str;
     has content:str;
-
+    has tag:str;
     can tweet with `root entry{
-        (tweet_node := &(self.tweet_node_jid)) +:Tweeting():+> (user_tweet := Tweet(self.content));
+        :g: tweet_node, hastag_node;
+        tweet_node +:Tweeting():+> (user_tweet := Tweet(self.content,self.tag));
+        tags = [i.tag for i in [hastag_node-->]];
+        if self.tag not in tags{
+            hastag_node ++> Hastag(self.tag);
+        }
+        Jac.unrestrict(user_tweet, 1);
+        report user_tweet;
+        report [hastag_node-->];
     }
 }
 
 walker comment{
     has tweet_jid:str;
-    has user_jid:str;
     has content:str;
 
     can comment with `root entry{
@@ -63,27 +89,31 @@ walker comment{
     }
 }
 
+walker load_feed{
+    can feed with `root entry{
+        feed_list = [];
+        followee_list = [root-:Following:->];
+        for followee in followee_list{
+            for tweet in [followee-->]{
+                feed_list.append(jid(tweet));
+            }
+        }
+        report [&i for i in feed_list];
+    }
+}
+
 walker search{
     has query:str;
 
-    can search with `root entry{
-        :g: db;
-        tweets_db = [];
-        for i in db{
-            tmp = [(&i)-->];
-            if tmp != []{
-                tweets += tmp;
+    can Search with entry{
+        search_tag:any = None;
+        :g: hastag_node;
+        hastag_list = [i for i in [hastag_node-->]];
+        for hastag in hastag_list{
+            if hastag.tag == self.query{
+                search_tag = hastag;
             }
         }
-        tweets = [(i.content) for i in self.tweets];
-        vectorizer = TfidfVectorizer();
-        tweet_vectors = vectorizer.fit_transform(tweets);
-        query_vector = vectorizer.transform(query);
-        similarity = cosine_similarity(query_vector, tweet_vectors).flatten();
-        ranked_tweets = sorted(zip(tweets, similarity), key=(with x:int can x), reverse=True);
-
-        top_tweets = [{"content": tweet, "similarity": sim} for (tweet, sim) in ranked_tweets[2:]];
-        top_tweets = [i["content"] for i in top_tweets];
-        report top_tweets;
+        report [search_tag-->] if search_tag else None;
     }
 }
